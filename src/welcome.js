@@ -12,7 +12,6 @@ const Welcome = () => {
 
   const navigate = useNavigate();
 
-  // ✅ Fetch current user
   useEffect(() => {
     fetch('http://localhost:5000/api/me', { credentials: 'include' })
       .then(res => res.ok ? res.json() : Promise.reject('Not logged in'))
@@ -23,11 +22,10 @@ const Welcome = () => {
       .catch(err => {
         console.error(err);
         setLoading(false);
-        navigate('/'); // redirect to login if not authenticated
+        navigate('/');
       });
   }, [navigate]);
 
-  // ✅ Fetch posts if commuter
   useEffect(() => {
     if (user?.role === 'Commuter') {
       const url = filter
@@ -40,7 +38,6 @@ const Welcome = () => {
     }
   }, [user, filter]);
 
-  // ✅ Submit new post
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
@@ -67,14 +64,13 @@ const Welcome = () => {
     }
   };
 
-  // ✅ Logout handler
   const handleLogout = async () => {
     try {
       await fetch('http://localhost:5000/api/logout', {
         method: 'POST',
         credentials: 'include'
       });
-      navigate('/'); // redirect to login
+      navigate('/login');
     } catch (err) {
       console.error('Logout failed:', err);
     }
@@ -84,15 +80,15 @@ const Welcome = () => {
   if (!user) return <p>Not logged in.</p>;
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="welcome-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Welcome, {user.username}!</h1>
         <button onClick={handleLogout}>Logout</button>
       </div>
 
-      {/* Driver: Post Form */}
+      {/* Driver Form */}
       {user.role === 'Driver' && (
-        <form onSubmit={handlePostSubmit}>
+        <form className="post-form" onSubmit={handlePostSubmit}>
           <h2>Submit Road Update</h2>
           <textarea
             value={description}
@@ -100,28 +96,24 @@ const Welcome = () => {
             placeholder="Describe what happened"
             required
             rows={4}
-            style={{ width: '100%' }}
           />
-          <br />
           <select value={type} onChange={(e) => setType(e.target.value)} required>
             <option value="accident">Accident</option>
             <option value="traffic_update">Traffic Update</option>
           </select>
-          <br />
           <input
             type="file"
             onChange={(e) => setImage(e.target.files[0])}
             accept="image/*"
             required
           />
-          <br />
           <button type="submit">Submit</button>
         </form>
       )}
 
-      {/* Commuter: View Posts */}
+      {/* Commuter View */}
       {user.role === 'Commuter' && (
-        <div>
+        <div className="post-list">
           <h2>Road Updates</h2>
           <label>Filter by Type: </label>
           <select value={filter} onChange={(e) => setFilter(e.target.value)}>
@@ -135,19 +127,13 @@ const Welcome = () => {
               <p>No posts found.</p>
             ) : (
               posts.map((post, i) => (
-                <div key={i} style={{
-                  border: '1px solid #ccc',
-                  padding: 10,
-                  marginBottom: 10,
-                  borderRadius: 6
-                }}>
+                <div className="post-card" key={i}>
                   <p><strong>Type:</strong> {post.type}</p>
                   <p>{post.description}</p>
                   {post.image_url && (
                     <img
                       src={`http://localhost:5000${post.image_url}`}
                       alt="post"
-                      style={{ maxWidth: '100%', maxHeight: '300px' }}
                     />
                   )}
                   <p><em>Posted at: {new Date(post.created_at).toLocaleString()}</em></p>
@@ -162,6 +148,7 @@ const Welcome = () => {
 };
 
 export default Welcome;
+
 
 
 

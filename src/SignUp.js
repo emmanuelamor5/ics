@@ -8,7 +8,7 @@ export default function Signup() {
     username: '',
     password: '',
     email: '',
-    specify: 'driver'
+    specify: 'Driver'
   });
 
   const navigate = useNavigate();
@@ -35,30 +35,67 @@ export default function Signup() {
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Signup</h2>
-      <form onSubmit={handleSubmit}>
-        <input name="firstname" value={form.firstname} onChange={handleChange} placeholder="First Name" required /><br />
-        <input name="lastname" value={form.lastname} onChange={handleChange} placeholder="Last Name" required /><br />
-        <input name="username" value={form.username} onChange={handleChange} placeholder="Username" required /><br />
-        <input name="email" value={form.email} onChange={handleChange} placeholder="Email" required type="email" /><br />
-        <input name="password" value={form.password} onChange={handleChange} placeholder="Password" required type="password" /><br />
-        <select name="specify" value={form.specify} onChange={handleChange} required>
-          <option value="Driver">Driver</option>
-          <option value="Commuter">Commuter</option>
-        </select><br />
-        <button type="submit">Sign Up</button>
-      </form>
+    <div className="page-container">
+      <div className="auth-box">
+        <h1>Sign Up</h1>
+        <form onSubmit={handleSubmit}>
+          <input
+            name="firstname"
+            value={form.firstname}
+            onChange={handleChange}
+            placeholder="First Name"
+            required
+          />
+          <input
+            name="lastname"
+            value={form.lastname}
+            onChange={handleChange}
+            placeholder="Last Name"
+            required
+          />
+          <input
+            name="username"
+            value={form.username}
+            onChange={handleChange}
+            placeholder="Username"
+            required
+          />
+          <input
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="Email"
+            required
+          />
+          <input
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="Password"
+            required
+          />
+          <select
+            name="specify"
+            value={form.specify}
+            onChange={handleChange}
+            required
+          >
+            <option value="Driver">Driver</option>
+            <option value="Commuter">Commuter</option>
+          </select>
+          <button type="submit">Sign Up</button>
+        </form>
 
-      {/* ✅ React Router Link */}
-      <p style={{ marginTop: '20px' }}>
-        Already have an account?{' '}
-        <Link to="/login" style={{ color: 'white', textDecoration: 'underline' }}>
-          Log in here
-        </Link>
-      </p>
+        <p>
+          Already have an account?{' '}
+          <Link to="/login">Log in here</Link>
+        </p>
+      </div>
     </div>
   );
 }
+
 
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Welcome = () => {
+const Roadupdate = () => {
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [filter, setFilter] = useState('');
@@ -147,7 +147,7 @@ const Welcome = () => {
   );
 };
 
-export default Welcome;
+export default Roadupdate;
 
 
 

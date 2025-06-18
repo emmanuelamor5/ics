@@ -8,7 +8,7 @@ body, html {
   height: 100%;
 }
 
-/* Centered page layout */
+/* Centered page layout for auth pages */
 .page-container {
   display: flex;
   justify-content: center;
@@ -33,7 +33,9 @@ body, html {
   color: #444;
 }
 
-.auth-box input, .auth-box select, .auth-box textarea {
+.auth-box input,
+.auth-box select,
+.auth-box textarea {
   width: 100%;
   padding: 10px 12px;
   margin-bottom: 1rem;
@@ -77,17 +79,35 @@ body, html {
 .welcome-container {
   max-width: 900px;
   margin: 2rem auto;
-  padding: 1rem 2rem;
+  padding: 1.5rem 2rem;
   background-color: white;
   border-radius: 12px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
 }
 
-.welcome-container h1 {
+.welcome-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
 }
 
-.post-form, .post-list {
+.welcome-header h1 {
+  font-size: 1.5rem;
+}
+
+.welcome-header button {
+  background-color: #dc3545;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.post-form,
+.post-list {
   margin-top: 2rem;
 }
 
@@ -104,3 +124,76 @@ body, html {
   margin-top: 0.5rem;
   border-radius: 6px;
 }
+
+.filter-dropdown {
+  margin: 1rem 0;
+}
+
+/* Home.js styles for commuter profile */
+.profile-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.profile-container img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+}
+
+.profile-container input,
+.profile-container button {
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.profile-container button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.profile-container button:hover {
+  background-color: #0056b3;
+}
+
+.profile-details {
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
+.profile-details p {
+  margin: 0.5rem 0;
+}
+
+.profile-actions {
+  margin-top: 1rem;
+}
+
+.link-button {
+  background-color: #28a745;
+  padding: 10px;
+  margin-top: 1rem;
+  display: inline-block;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.link-button:hover {
+  background-color: #218838;
+}
+
+

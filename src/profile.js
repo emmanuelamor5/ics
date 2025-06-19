@@ -95,12 +95,12 @@ const Home = () => {
             <p><strong>Last Name:</strong> {user.lastname}</p>
             <p><strong>Username:</strong> {user.username}</p>
             <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Role:</strong> {user.specify}</p>
+            
           </div>
           <div className="profile-actions">
             <button onClick={() => setEditing(true)}>Edit Profile</button>
-            <button onClick={handleLogout} style={{ backgroundColor: '#dc3545' }}>Logout</button>
-            <button onClick={() => navigate('/roadupdate')} className="link-button">View Road Updates</button>
+
+
           </div>
         </>
       ) : (

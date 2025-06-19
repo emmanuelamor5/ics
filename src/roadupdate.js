@@ -27,7 +27,7 @@ const Roadupdate = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (user?.role === 'Commuter') {
+    if (user?.specify === 'Commuter') {
       const url = filter
         ? `http://localhost:5000/api/posts?type=${filter}`
         : 'http://localhost:5000/api/posts';
@@ -64,40 +64,23 @@ const Roadupdate = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('http://localhost:5000/api/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
-  };
-
-  if (loading) return <p>Loading...</p>;
-  if (!user) return <p>Not logged in.</p>;
+  if (loading) return <p style={{ textAlign: 'center' }}>Loading...</p>;
+  if (!user) return <p style={{ textAlign: 'center' }}>Not logged in.</p>;
 
   return (
-    <div className="welcome-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Welcome, {user.username}!</h1>
-        <button onClick={handleLogout}>Logout</button>
-      </div>
-
-      {/* Driver Form */}
-      {user.role === 'Driver' && (
-        <form className="post-form" onSubmit={handlePostSubmit}>
-          <h2>Submit Road Update</h2>
+    <div style={styles.container}>
+      {user.specify === 'Driver' && (
+        <form style={styles.form} onSubmit={handlePostSubmit}>
+          <h2 style={styles.heading}>Submit Road Update</h2>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe what happened"
             required
             rows={4}
+            style={styles.textarea}
           />
-          <select value={type} onChange={(e) => setType(e.target.value)} required>
+          <select value={type} onChange={(e) => setType(e.target.value)} required style={styles.select}>
             <option value="accident">Accident</option>
             <option value="traffic_update">Traffic Update</option>
           </select>
@@ -106,17 +89,17 @@ const Roadupdate = () => {
             onChange={(e) => setImage(e.target.files[0])}
             accept="image/*"
             required
+            style={styles.input}
           />
-          <button type="submit">Submit</button>
+          <button type="submit" style={styles.button}>Submit</button>
         </form>
       )}
 
-      {/* Commuter View */}
-      {user.role === 'Commuter' && (
-        <div className="post-list">
-          <h2>Road Updates</h2>
-          <label>Filter by Type: </label>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+      {user.specify === 'Commuter' && (
+        <div style={styles.postSection}>
+          <h2 style={styles.heading}>Road Updates</h2>
+          <label style={styles.label}>Filter by Type:</label>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} style={styles.select}>
             <option value="">All</option>
             <option value="accident">Accident</option>
             <option value="traffic_update">Traffic Update</option>
@@ -127,13 +110,14 @@ const Roadupdate = () => {
               <p>No posts found.</p>
             ) : (
               posts.map((post, i) => (
-                <div className="post-card" key={i}>
+                <div key={i} style={styles.postCard}>
                   <p><strong>Type:</strong> {post.type}</p>
                   <p>{post.description}</p>
                   {post.image_url && (
                     <img
                       src={`http://localhost:5000${post.image_url}`}
                       alt="post"
+                      style={styles.image}
                     />
                   )}
                   <p><em>Posted at: {new Date(post.created_at).toLocaleString()}</em></p>
@@ -147,7 +131,80 @@ const Roadupdate = () => {
   );
 };
 
+const styles = {
+  container: {
+    padding: '30px',
+    fontFamily: 'Arial, sans-serif',
+    maxWidth: '800px',
+    margin: '0 auto',
+  },
+  heading: {
+    marginBottom: '15px',
+    color: '#333',
+  },
+  form: {
+    backgroundColor: '#fff',
+    border: '1px solid #ddd',
+    borderRadius: '10px',
+    padding: '20px',
+    marginBottom: '30px',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
+  },
+  textarea: {
+    width: '100%',
+    padding: '10px',
+    marginBottom: '10px',
+    borderRadius: '6px',
+    border: '1px solid #ccc',
+    fontSize: '16px',
+  },
+  select: {
+    width: '100%',
+    padding: '10px',
+    marginBottom: '10px',
+    borderRadius: '6px',
+    border: '1px solid #ccc',
+  },
+  input: {
+    marginBottom: '10px',
+    padding: '10px 0',
+  },
+  button: {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#007bff',
+    color: '#fff',
+    fontSize: '16px',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+  },
+  postSection: {
+    marginTop: '20px',
+  },
+  label: {
+    fontWeight: 'bold',
+    marginRight: '10px',
+  },
+  postCard: {
+    border: '1px solid #ccc',
+    padding: '15px',
+    borderRadius: '8px',
+    marginBottom: '15px',
+    backgroundColor: '#fafafa',
+  },
+  image: {
+    width: '100%',
+    maxHeight: '300px',
+    borderRadius: '6px',
+    objectFit: 'cover',
+    marginTop: '10px',
+  },
+};
+
 export default Roadupdate;
+
+
 
 
 

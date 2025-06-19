@@ -1,65 +1,129 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+function Login() {
+  const [form, setForm] = useState({ username: '', password: '' });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleChange = (e) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     try {
       const res = await fetch('http://localhost:5000/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify(form),
       });
 
-      const data = await res.json(); // ✅ Parse response before using
+      const data = await res.json();
+      const role = (data.specify || '').toLowerCase();
 
-      if (res.ok && data.user) {
-        if (data.user.role === 'Driver') {
-          navigate('/driver-dashboard'); // 🚗 Driver goes here
-        } else {
-          navigate('/Dashboard'); // 🧍 Commuter goes here
+      if (res.ok) {
+        alert('Login successful!');
+
+        if (role === 'driver') navigate('/driver-dashboard');
+        else if (role === 'commuter') navigate('/dashboard');
+        else if (role === 'admin') navigate('/profile');
+        else {
+          console.warn('Unknown role:', role);
+          navigate('/profile');
         }
       } else {
-        alert(data.message || 'Login failed');
+        setError(data.message || 'Login failed');
       }
     } catch (err) {
       console.error(err);
-      alert('Network error. Is the server running?');
+      setError('An error occurred. Please try again.');
     }
   };
 
   return (
-    <div className="page-container">
-      <div className="auth-box">
-        <h1>Login</h1>
-        <form onSubmit={handleLogin}>
+    <div style={styles.container}>
+      <div style={styles.box}>
+        <h2 style={styles.heading}>Login</h2>
+        <form onSubmit={handleSubmit}>
           <input
-            type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
+            name="username"
             placeholder="Username"
+            value={form.username}
+            onChange={handleChange}
             required
+            style={styles.input}
           />
           <input
             type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
+            name="password"
             placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
             required
+            style={styles.input}
           />
-          <button type="submit">Login</button>
+          <button type="submit" style={styles.button}>Login</button>
         </form>
-        <p>
-          Don't have an account? <Link to="/">Sign up</Link>
-        </p>
+        {error && <p style={styles.error}>{error}</p>}
       </div>
     </div>
+    
   );
 }
+
+const styles = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    background: '#f5f7fa',
+  },
+  box: {
+    background: '#fff',
+    padding: '40px',
+    borderRadius: '10px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    width: '100%',
+    maxWidth: '400px',
+  },
+  heading: {
+    textAlign: 'center',
+    marginBottom: '20px',
+    color: '#333',
+  },
+  input: {
+    width: '100%',
+    padding: '12px',
+    marginBottom: '15px',
+    borderRadius: '6px',
+    border: '1px solid #ccc',
+    fontSize: '16px',
+  },
+  button: {
+    width: '100%',
+    padding: '12px',
+    border: 'none',
+    borderRadius: '6px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    fontSize: '16px',
+    cursor: 'pointer',
+  },
+  error: {
+    marginTop: '10px',
+    color: 'red',
+    textAlign: 'center',
+  },
+};
+
+export default Login;
+
+
+
 
 

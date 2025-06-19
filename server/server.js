@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const pool = require('./database.js');
 
 const app = express();
@@ -12,33 +13,38 @@ const PORT = 5000;
 // --- Middleware ---
 app.use(express.json());
 
-// ✅ Proper CORS config to allow cookies from React frontend
+// CORS config for React frontend 
 app.use(cors({
   origin: 'http://localhost:3001',
   credentials: true
 }));
 
-// ✅ Session setup
+// Persistent session store using PostgreSQL
 app.use(session({
+  store: new pgSession({
+    pool: pool,
+    tableName: 'session'
+  }),
   secret: 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: {secure: false}
+  cookie: {
+    secure: false, // use true if using HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+  }
 }));
 
-// ✅ Serve uploaded images
+// Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- Multer for image uploads ---
+// --- Multer config for file uploads ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
 });
 const upload = multer({ storage });
 
-// --- Routes ---
-
-// ✅ Signup
+// --- Auth Routes ---
 app.post('/api/signup', async (req, res) => {
   const { firstname, lastname, username, password, email, specify } = req.body;
   try {
@@ -54,15 +60,23 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// ✅ Login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   try {
     const userResult = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     const user = userResult.rows[0];
+
     if (user && await bcrypt.compare(password, user.password)) {
-      req.session.user = { username: user.username, role: user.specify };
-      res.json({ message: 'Login successful', user: req.session.user });
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        role: user.specify
+      };
+      res.json({
+        message: 'Login successful',
+        username: req.session.user.username,
+        specify: user.specify
+      });
     } else {
       res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -72,26 +86,84 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// ✅ Logout
 app.post('/api/logout', (req, res) => {
   req.session.destroy(err => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: 'Logout failed' });
-    }
-    res.clearCookie('connect.sid'); // clears session cookie
+    if (err) return res.status(500).json({ message: 'Logout failed' });
+    res.clearCookie('connect.sid');
     res.json({ message: 'Logged out successfully' });
   });
 });
 
-
-// ✅ Get current user
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ message: 'Not logged in' });
-  res.json(req.session.user);
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [req.session.user.username]);
+    const user = result.rows[0];
+    res.json({
+      username: user.username,
+      email: user.email,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      specify: user.specify,
+      profile_photo: user.profile_photo || null
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch user details' });
+  }
 });
 
-// ✅ Submit post (driver)
+// --- Profile Update ---
+app.post('/api/update-profile', upload.single('profilePhoto'), async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ message: 'Not authenticated' });
+
+  const { firstname, lastname, username, email, specify } = req.body;
+  const profile_photo = req.file ? `/uploads/${req.file.filename}` : null;
+
+  try {
+    const userCheck = await pool.query('SELECT * FROM users WHERE username = $1', [req.session.user.username]);
+    if (!userCheck.rows[0]) return res.status(404).json({ message: 'User not found' });
+
+    if (profile_photo) {
+      await pool.query(
+        `
+        UPDATE users
+        SET firstname = $1,
+            lastname = $2,
+            username = $3,
+            email = $4,
+            specify = $5,
+            profile_photo = $6
+        WHERE username = $7
+        `,
+        [firstname, lastname, username, email, specify, profile_photo, req.session.user.username]
+      );
+    } else {
+      await pool.query(
+        `
+        UPDATE users
+        SET firstname = $1,
+            lastname = $2,
+            username = $3,
+            email = $4,
+            specify = $5
+        WHERE username = $6
+        `,
+        [firstname, lastname, username, email, specify, req.session.user.username]
+      );
+    }
+
+    req.session.user = { username, role: specify };
+    res.json({ message: 'Profile updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating profile' });
+  }
+});
+
+
+// --- Posts & Road Updates ---
 app.post('/api/post', upload.single('image'), async (req, res) => {
   const { description, type } = req.body;
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
@@ -108,10 +180,8 @@ app.post('/api/post', upload.single('image'), async (req, res) => {
   }
 });
 
-// ✅ Get posts (commuter view)
 app.get('/api/posts', async (req, res) => {
   const { type } = req.query;
-
   try {
     let query = 'SELECT * FROM posts';
     const values = [];
@@ -130,8 +200,82 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// ✅ Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+app.get('/api/alerts', async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM posts WHERE type = 'accident' OR type = 'traffic_update' ORDER BY created_at DESC",
+      
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching alerts' });
+  }
 });
+
+// --- Lost and Found ---
+app.post('/api/lost-item', upload.single('image'), async (req, res) => {
+  const { description, lostitem, route, date, sacco } = req.body;
+  const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+  if (!req.session.user || req.session.user.role !== 'Driver') {
+    return res.status(403).json({ message: 'Only drivers can submit lost item reports' });
+  }
+
+  try {
+    await pool.query(
+      'INSERT INTO lostandfound (lostitem, route, date, sacco, description, image_url) VALUES ($1, $2, $3, $4, $5, $6)',
+      [lostitem, route, date, sacco, description, image_url]
+    );
+    res.status(201).json({ message: 'Lost item report submitted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error saving lost item report' });
+  }
+});
+
+
+// --- Claims ---
+app.post('/api/claim-item', async (req, res) => {
+  const { lost_item_id, claimer_name, contact_info, details } = req.body;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO claims (lost_item_id, claimer_name, contact_info, details)
+       VALUES ($1, $2, $3, $4)`,
+      [lost_item_id, claimer_name, contact_info, details]
+    );
+    res.status(201).json({ message: 'Claim submitted successfully' });
+  } catch (err) {
+    console.error('Claim error:', err);
+    res.status(500).json({ message: 'Error submitting claim' });
+  }
+});
+
+// Get lost items with claims
+app.get('/api/lost-items', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT lf.*, c.claimer_name, c.contact_info, c.details AS claim_details
+      FROM lostandfound lf
+      LEFT JOIN claims c ON lf.id = c.lost_item_id
+      ORDER BY lf.date DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching lost items with claims' });
+  }
+});
+
+
+// --- Start Server ---
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
+
 

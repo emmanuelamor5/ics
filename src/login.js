@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -27,14 +27,10 @@ function Login() {
 
       if (res.ok) {
         alert('Login successful!');
-
         if (role === 'driver') navigate('/driver-dashboard');
         else if (role === 'commuter') navigate('/dashboard');
         else if (role === 'admin') navigate('/profile');
-        else {
-          console.warn('Unknown role:', role);
-          navigate('/profile');
-        }
+        else navigate('/profile');
       } else {
         setError(data.message || 'Login failed');
       }
@@ -45,83 +41,145 @@ function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.box}>
-        <h2 style={styles.heading}>Login</h2>
-        <form onSubmit={handleSubmit}>
-          <input
-            name="username"
-            placeholder="Username"
-            value={form.username}
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
-          <button type="submit" style={styles.button}>Login</button>
-        </form>
-        {error && <p style={styles.error}>{error}</p>}
+    <>
+      <style>{`
+        body {
+          font-family: 'Courier New', monospace;
+          background: linear-gradient(135deg, #0a0a0a 0%, #1a0b2e 50%, #0a0a0a 100%);
+          color: #00d4ff;
+          overflow: hidden;
+          min-height: 100vh;
+        }
+
+        .login-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          padding: 20px;
+        }
+
+        .login-box {
+          background: rgba(26, 11, 46, 0.5);
+          border: 1px solid rgba(0, 212, 255, 0.3);
+          border-radius: 15px;
+          padding: 40px;
+          max-width: 400px;
+          width: 100%;
+          backdrop-filter: blur(15px);
+          box-shadow: 0 0 25px rgba(0, 212, 255, 0.2);
+          animation: pulseBox 4s infinite alternate;
+        }
+
+        @keyframes pulseBox {
+          0% { box-shadow: 0 0 25px rgba(0, 212, 255, 0.2); }
+          100% { box-shadow: 0 0 50px rgba(57, 255, 20, 0.4); }
+        }
+
+        .login-box h2 {
+          color: #39ff14;
+          text-align: center;
+          margin-bottom: 25px;
+          text-transform: uppercase;
+          font-size: 1.8rem;
+        }
+
+        .login-box input {
+          width: 100%;
+          padding: 12px 16px;
+          margin-bottom: 18px;
+          border-radius: 8px;
+          border: 1px solid rgba(0, 212, 255, 0.3);
+          background: rgba(0,0,0,0.1);
+          color: #00d4ff;
+          font-family: inherit;
+          font-size: 1rem;
+          outline: none;
+          transition: all 0.3s ease;
+        }
+
+        .login-box input:focus {
+          border-color: #39ff14;
+          box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
+        }
+
+        .login-box button {
+          width: 100%;
+          padding: 12px;
+          background: linear-gradient(45deg, #00d4ff, #39ff14);
+          color: #0a0a0a;
+          font-weight: bold;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          text-transform: uppercase;
+          transition: all 0.3s ease;
+        }
+
+        .login-box button:hover {
+          transform: scale(1.03);
+          box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .login-error {
+          color: #ff4d4d;
+          text-align: center;
+          margin-top: 15px;
+          font-size: 0.95rem;
+        }
+
+        .forgot-password {
+          margin-top: 12px;
+          text-align: center;
+        }
+
+        .forgot-password a {
+          color: #00d4ff;
+          font-size: 0.95rem;
+          text-decoration: none;
+          transition: color 0.3s;
+        }
+
+        .forgot-password a:hover {
+          color: #39ff14;
+          text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+        }
+      `}</style>
+
+      <div className="login-container">
+        <div className="login-box">
+          <h2>Login</h2>
+          <form onSubmit={handleSubmit}>
+            <input
+              name="username"
+              placeholder="Username"
+              value={form.username}
+              onChange={handleChange}
+              required
+            />
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+            <button type="submit">Login</button>
+          </form>
+
+          
+
+          {error && <p className="login-error">{error}</p>}
+        </div>
       </div>
-    </div>
-    
+    </>
   );
 }
 
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    background: '#f5f7fa',
-  },
-  box: {
-    background: '#fff',
-    padding: '40px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    width: '100%',
-    maxWidth: '400px',
-  },
-  heading: {
-    textAlign: 'center',
-    marginBottom: '20px',
-    color: '#333',
-  },
-  input: {
-    width: '100%',
-    padding: '12px',
-    marginBottom: '15px',
-    borderRadius: '6px',
-    border: '1px solid #ccc',
-    fontSize: '16px',
-  },
-  button: {
-    width: '100%',
-    padding: '12px',
-    border: 'none',
-    borderRadius: '6px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    fontSize: '16px',
-    cursor: 'pointer',
-  },
-  error: {
-    marginTop: '10px',
-    color: 'red',
-    textAlign: 'center',
-  },
-};
-
 export default Login;
+
+
 
 
 

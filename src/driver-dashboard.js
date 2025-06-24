@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import WeatherBox from './weatherbox';
 
 function DriverDashboard() {
   const [alerts, setAlerts] = useState([]);
@@ -14,14 +15,22 @@ function DriverDashboard() {
         return res.json();
       })
       .then(data => {
-        if (data.specify !== 'Driver') {
-          navigate('/login');
-        } else {
+        if (data.specify !== 'Driver') navigate('/login');
+        else {
           setUser(data);
+          setLoading(false);
         }
       })
       .catch(() => navigate('/login'));
   }, [navigate]);
+
+  const handleLogout = async () => {
+    await fetch('http://localhost:5000/api/logout', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    navigate('/login');
+  };
 
   useEffect(() => {
     fetch('http://localhost:5000/api/alerts', { credentials: 'include' })
@@ -36,129 +45,187 @@ function DriverDashboard() {
       });
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await fetch('http://localhost:5000/api/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
+  if (loading) return <p style={styles.loading}>Loading driver dashboard...</p>;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>Driver Dashboard</h2>
-        <p style={styles.weather}>Weather: Sunny, 24°C | Nairobi CBD</p>
+    <>
+      {/* ====== Cyberpunk theme styles ====== */}
+      <style>{`
+        body {
+          font-family: 'Courier New', monospace;
+          background: linear-gradient(135deg, #0a0a0a 0%, #1a0b2e 50%, #0a0a0a 100%);
+          color: #00d4ff;
+          overflow-x: hidden;
+          min-height: 100vh;
+        }
+
+        .cyber-grid {
+          position: fixed; top:0; left:0;
+          width:100%; height:100%;
+          background-image:
+            linear-gradient(rgba(0,212,255,0.1) 1px, transparent 1px),
+            linear-gradient(90deg,rgba(0,212,255,0.1) 1px,transparent 1px);
+          background-size:50px 50px;
+          z-index:-2;
+          animation: gridPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+          0%,100% { opacity: 0.3; } 50% { opacity: 0.6; }
+        }
+
+        .particles {
+          position: fixed; top:0; left:0;
+          width:100%; height:100%;
+          pointer-events:none; z-index:-1;
+        }
+
+        .particle {
+          position:absolute;
+          width:2px; height:2px;
+          background:linear-gradient(45deg,#39ff14,#00d4ff);
+          border-radius:50%;
+          animation: float 6s linear infinite;
+        }
+
+        @keyframes float {
+          0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(-10vh) translateX(100px); opacity: 0; }
+        }
+      `}</style>
+
+      <div className="cyber-grid"></div>
+      <div className="particles">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div
+            key={i}
+            className="particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 6}s`,
+            }}
+          />
+        ))}
       </div>
 
-      <div style={styles.actions}>
-        <button style={styles.button} onClick={() => navigate('/roadupdate')}>Post Road Update</button>
-        <button style={styles.button} onClick={() => navigate('/lostandfound')}>Report Lost/Found Item</button>
-        <button style={styles.button} onClick={() => navigate('/profile')}>View Profile</button>
-        <button style={{ ...styles.button, backgroundColor: '#e74c3c' }} onClick={handleLogout}>Logout</button>
-      </div>
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h2>Welcome, {user?.firstname || 'Driver'}!</h2>
+          <p style={styles.subheading}>Your driver dashboard</p>
 
-      <h3 style={styles.sectionTitle}>Traffic Alerts</h3>
+          {/* 🌤 Weather Section */}
+          <WeatherBox />
 
-      {loading ? (
-        <p style={styles.loading}>Loading alerts...</p>
-      ) : (
-        <div style={styles.alertList}>
-          {alerts.length === 0 ? (
-            <p style={styles.noAlerts}>No alerts available.</p>
-          ) : (
-            alerts.map(post => (
-              <div key={post.id} style={styles.alertCard}>
-                <p><strong>Type:</strong> {post.type}</p>
-                <p><strong>Description:</strong> {post.description}</p>
-                <p><strong>Time:</strong> {new Date(post.created_at).toLocaleString()}</p>
-                {post.image_url && (
-                  <img
-                    src={`http://localhost:5000${post.image_url}`}
-                    alt="Road Update"
-                    style={styles.image}
-                  />
-                )}
-              </div>
-            ))
+          <div style={styles.actions}>
+            <button style={styles.button} onClick={() => navigate('/roadupdate')}>Post Road Update</button>
+            <button style={styles.button} onClick={() => navigate('/RatingsDisplay')}>View Ratings</button>
+            <button style={styles.button} onClick={() => navigate('/lostandfound')}>Post Lost & Found items</button>
+            <button style={styles.button} onClick={() => navigate('/profile')}>Edit Profile</button>
+            <button style={{ ...styles.button, backgroundColor: '#e74c3c' }} onClick={handleLogout}>Logout</button>
+          </div>
+
+          <p style={styles.note}>
+            Here you can report road alerts, manage lost items and keep passengers informed.
+          </p>
+          <h3 className="alerts-section-title">Road Updates</h3>
+
+        {loading ? (
+          <p className="loading-text">Loading alerts...</p>
+        ) : (
+          <div className="alerts-list">
+            {alerts.length === 0 ? (
+              <p className="no-alerts">No alerts available.</p>
+            ) : (
+              alerts.map(post => (
+                <div key={post.id} className="alert-card">
+                  <p><strong>Type:</strong> {post.type}</p>
+                  <p><strong>Description:</strong> {post.description}</p>
+                  <p><strong>Time:</strong> {new Date(post.created_at).toLocaleString()}</p>
+                  <p><strong>Severity Level:</strong> {post.severity_level}</p>
+                  {post.image_url && (
+                    <img
+                      src={`http://localhost:5000${post.image_url}`}
+                      alt="Road Update"
+                      className="alert-image"
+                    />
+                  )}
+                </div>
+              ))
+            )}
+
+        </div>
           )}
         </div>
-      )}
-    </div>
+
+      </div>
+    </>
   );
 }
 
 const styles = {
   container: {
     padding: '40px 20px',
-    fontFamily: 'Arial, sans-serif',
-    background: '#f4f7fa',
-    minHeight: '100vh'
+    display: 'flex',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    fontFamily: 'Courier New, monospace',
   },
-  header: {
-    marginBottom: '30px',
-    textAlign: 'center'
+  card: {
+    background: 'rgba(26, 11, 46, 0.5)',
+    border: '1px solid rgba(0, 212, 255, 0.4)',
+    borderRadius: '15px',
+    padding: '30px',
+    maxWidth: '600px',
+    width: '100%',
+    backdropFilter: 'blur(15px)',
+    boxShadow: '0 0 25px rgba(0, 212, 255, 0.2)',
   },
-  title: {
-    fontSize: '28px',
-    color: '#2c3e50',
-    marginBottom: '10px'
+  heading: {
+    color: '#39ff14',
+    fontSize: '1.8rem',
+    textAlign: 'center',
+    marginBottom: '10px',
+    textTransform: 'uppercase',
   },
-  weather: {
-    fontSize: '16px',
-    color: '#7f8c8d'
+  subheading: {
+    color: '#00d4ff',
+    textAlign: 'center',
+    fontSize: '1rem',
+    marginBottom: '20px',
   },
   actions: {
     display: 'grid',
-    gap: '15px',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    marginBottom: '40px'
+    gap: '12px',
+    gridTemplateColumns: '1fr 1fr',
+    marginTop: '20px',
+    marginBottom: '20px',
   },
   button: {
     padding: '12px',
-    fontSize: '16px',
-    borderRadius: '8px',
+    background: 'linear-gradient(45deg, #00d4ff, #39ff14)',
+    color: '#0a0a0a',
+    fontWeight: 'bold',
     border: 'none',
-    backgroundColor: '#3498db',
-    color: '#fff',
+    borderRadius: '8px',
     cursor: 'pointer',
-    transition: '0.3s'
+    transition: 'transform 0.3s, box-shadow 0.3s',
   },
-  sectionTitle: {
-    fontSize: '22px',
-    color: '#34495e',
-    marginBottom: '15px'
+  note: {
+    color: '#00d4ff',
+    textAlign: 'center',
+    fontSize: '0.9rem',
   },
   loading: {
-    fontSize: '16px',
-    color: '#999'
-  },
-  noAlerts: {
-    fontStyle: 'italic',
-    color: '#555'
-  },
-  alertList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  alertCard: {
-    background: '#fff',
-    padding: '15px 20px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-  },
-  image: {
-    marginTop: '10px',
-    borderRadius: '6px',
-    maxWidth: '100%'
+    textAlign: 'center',
+    marginTop: '50vh',
+    color: '#999',
   }
 };
 
 export default DriverDashboard;
+
+
 
 

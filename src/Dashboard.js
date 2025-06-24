@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import WeatherBox from './weatherbox';
 
 function Dashboard() {
   const [user, setUser] = useState(null);
@@ -13,9 +14,8 @@ function Dashboard() {
         return res.json();
       })
       .then(data => {
-        if (data.specify !== 'Commuter') {
-          navigate('/login');
-        } else {
+        if (data.specify !== 'Commuter') navigate('/login');
+        else {
           setUser(data);
           setLoading(false);
         }
@@ -24,93 +24,165 @@ function Dashboard() {
   }, [navigate]);
 
   const handleLogout = async () => {
-    try {
-      await fetch('http://localhost:5000/api/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
+    await fetch('http://localhost:5000/api/logout', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    navigate('/login');
   };
 
-  if (loading) return <p>Loading commuter dashboard...</p>;
+  if (loading) return <p style={styles.loading}>Loading commuter dashboard...</p>;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.heading}>Welcome, {user.firstname}!</h2>
-        <p style={styles.subheading}>Your commuter dashboard</p>
+    <>
+      {/* ====== Cyberpunk theme styles ====== */}
+      <style>{`
+        body {
+          font-family: 'Courier New', monospace;
+          background: linear-gradient(135deg, #0a0a0a 0%, #1a0b2e 50%, #0a0a0a 100%);
+          color: #00d4ff;
+          overflow-x: hidden;
+          min-height: 100vh;
+        }
 
-        <div style={styles.actions}>
-          <button style={styles.button} onClick={() => navigate('/matatustages')}>Matatu Stages</button>
-          <button style={styles.button} onClick={() => navigate('/saccoratings')}>Rate Saccos</button>
-          <button style={styles.button} onClick={() => navigate('/lostandfound')}>Lost & Found</button>
-          <button style={styles.button} onClick={() => navigate('/roadupdate')}>Traffic Alerts</button>
-          <button style={styles.button} onClick={() => navigate('/profile')}>Edit Profile</button>
-          <button style={{ ...styles.button, backgroundColor: '#e74c3c' }} onClick={handleLogout}>Logout</button>
-        </div>
+        .cyber-grid {
+          position: fixed; top:0; left:0;
+          width:100%; height:100%;
+          background-image:
+            linear-gradient(rgba(0,212,255,0.1) 1px, transparent 1px),
+            linear-gradient(90deg,rgba(0,212,255,0.1) 1px,transparent 1px);
+          background-size:50px 50px;
+          z-index:-2;
+          animation: gridPulse 4s ease-in-out infinite;
+        }
 
-        <p style={styles.note}>
-          Here, you can monitor road conditions, find Matatu stages, rate Saccos, and retrieve lost items.
-        </p>
+        @keyframes gridPulse {
+          0%,100% { opacity: 0.3; } 50% { opacity: 0.6; }
+        }
+
+        .particles {
+          position: fixed; top:0; left:0;
+          width:100%; height:100%;
+          pointer-events:none; z-index:-1;
+        }
+
+        .particle {
+          position:absolute;
+          width:2px; height:2px;
+          background:linear-gradient(45deg,#39ff14,#00d4ff);
+          border-radius:50%;
+          animation: float 6s linear infinite;
+        }
+
+        @keyframes float {
+          0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(-10vh) translateX(100px); opacity: 0; }
+        }
+      `}</style>
+
+      <div className="cyber-grid"></div>
+      <div className="particles">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div
+            key={i}
+            className="particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 6}s`,
+            }}
+          />
+        ))}
       </div>
-    </div>
+
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h2 style={styles.heading}>Welcome, {user.firstname}!</h2>
+          <p style={styles.subheading}>Your commuter dashboard</p>
+
+          {/* 🔥 Weather Section */}
+          <WeatherBox />
+
+          <div style={styles.actions}>
+            <button style={styles.button} onClick={() => navigate('/Home')}>Find Matatu Stages</button>
+            <button style={styles.button} onClick={() => navigate('/RatingForm')}>Rate Saccos</button>
+            <button style={styles.button} onClick={() => navigate('/RatingsDisplay')}>View ratings for Matatus</button>
+            <button style={styles.button} onClick={() => navigate('/lostandfound')}>Lost & Found Reports</button>
+            <button style={styles.button} onClick={() => navigate('/roadupdate')}>Traffic Alerts</button>
+            <button style={styles.button} onClick={() => navigate('/profile')}>Edit Profile</button>
+            <button style={{ ...styles.button, backgroundColor: '#e74c3c' }} onClick={handleLogout}>Logout</button>
+          </div>
+
+          <p style={styles.note}>
+            Here, you can monitor road conditions, find Matatu stages, rate Saccos, and retrieve lost items.
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
 
 const styles = {
   container: {
+    padding: '40px 20px',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'flex-start',
     minHeight: '100vh',
-    paddingTop: '60px',
-    background: 'linear-gradient(to right, #d3cce3, #e9e4f0)',
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: 'Courier New, monospace',
   },
   card: {
-    backgroundColor: '#fff',
-    padding: '40px',
-    borderRadius: '12px',
-    boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
-    width: '90%',
+    background: 'rgba(26, 11, 46, 0.5)',
+    border: '1px solid rgba(0, 212, 255, 0.4)',
+    borderRadius: '15px',
+    padding: '30px',
     maxWidth: '600px',
-    textAlign: 'center',
+    width: '100%',
+    backdropFilter: 'blur(15px)',
+    boxShadow: '0 0 25px rgba(0, 212, 255, 0.2)',
   },
   heading: {
+    color: '#39ff14',
+    fontSize: '1.8rem',
+    textAlign: 'center',
     marginBottom: '10px',
-    fontSize: '28px',
-    color: '#2c3e50',
+    textTransform: 'uppercase',
   },
   subheading: {
-    fontSize: '16px',
-    color: '#7f8c8d',
-    marginBottom: '30px',
+    color: '#00d4ff',
+    textAlign: 'center',
+    fontSize: '1rem',
+    marginBottom: '20px',
   },
   actions: {
     display: 'grid',
-    gap: '15px',
+    gap: '12px',
     gridTemplateColumns: '1fr 1fr',
-    marginBottom: '30px',
+    marginTop: '20px',
+    marginBottom: '20px',
   },
   button: {
     padding: '12px',
-    fontSize: '16px',
-    borderRadius: '8px',
+    background: 'linear-gradient(45deg, #00d4ff, #39ff14)',
+    color: '#0a0a0a',
+    fontWeight: 'bold',
     border: 'none',
-    backgroundColor: '#3498db',
-    color: '#fff',
+    borderRadius: '8px',
     cursor: 'pointer',
-    transition: 'background 0.3s',
+    transition: 'transform 0.3s, box-shadow 0.3s',
   },
   note: {
-    fontSize: '14px',
-    color: '#555',
-    marginTop: '10px',
+    color: '#00d4ff',
+    textAlign: 'center',
+    fontSize: '0.9rem',
+  },
+  loading: {
+    textAlign: 'center',
+    marginTop: '50vh',
+    color: '#999',
   }
 };
 
 export default Dashboard;
+
 

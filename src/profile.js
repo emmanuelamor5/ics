@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Home = () => {
+const Homee = () => {
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     firstname: '',
@@ -80,81 +80,136 @@ const Home = () => {
     }
   };
 
-  if (!user) return <p className="page-container">Loading...</p>;
+  if (!user) return <p className="cyber-loading">Loading...</p>;
 
   return (
-    <div className="profile-container">
-      {!editing ? (
-        <>
-          <img
-            src={user.profile_photo ? `http://localhost:5000${user.profile_photo}` : '/default-profile.png'}
-            alt="Profile"
-          />
-          <div className="profile-details">
-            <p><strong>First Name:</strong> {user.firstname}</p>
-            <p><strong>Last Name:</strong> {user.lastname}</p>
-            <p><strong>Username:</strong> {user.username}</p>
-            <p><strong>Email:</strong> {user.email}</p>
-            
-          </div>
-          <div className="profile-actions">
-            <button onClick={() => setEditing(true)}>Edit Profile</button>
+    <>
+      <style>{cyberStyle}</style>
+      <div className="cyber-profile-container">
+        {!editing ? (
+          <>
+            <img
+              src={user.profile_photo ? `http://localhost:5000${user.profile_photo}` : '/default-profile.png'}
+              alt="Profile"
+              className="cyber-profile-img"
+            />
+            <div className="cyber-profile-details">
+              <p><strong>First Name:</strong> {user.firstname}</p>
+              <p><strong>Last Name:</strong> {user.lastname}</p>
+              <p><strong>Username:</strong> {user.username}</p>
+              <p><strong>Email:</strong> {user.email}</p>
+            </div>
+            <div className="cyber-profile-actions">
+              <button onClick={() => setEditing(true)} className="cyber-btn">Edit Profile</button>
 
-
-          </div>
-        </>
-      ) : (
-        <form onSubmit={handleSubmit} className="post-form">
-          <input
-            type="text"
-            name="firstname"
-            value={formData.firstname}
-            onChange={handleChange}
-            placeholder="First Name"
-            required
-          />
-          <input
-            type="text"
-            name="lastname"
-            value={formData.lastname}
-            onChange={handleChange}
-            placeholder="Last Name"
-            required
-          />
-          <input
-            type="text"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            placeholder="Username"
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Email"
-            required
-          />
-          <select name="specify" value={formData.specify} onChange={handleChange} required>
-            <option value="">Select Role</option>
-            <option value="Commuter">Commuter</option>
-            <option value="Driver">Driver</option>
-          </select>
-          <input
-            type="file"
-            name="profilePhoto"
-            accept="image/*"
-            onChange={handleChange}
-          />
-          <button type="submit">Save Changes</button>
-          <button type="button" style={{ marginLeft: '10px' }} onClick={() => setEditing(false)}>Cancel</button>
-        </form>
-      )}
-    </div>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={handleSubmit} className="cyber-form">
+            <input type="text" name="firstname" value={formData.firstname} onChange={handleChange} placeholder="First Name" required />
+            <input type="text" name="lastname" value={formData.lastname} onChange={handleChange} placeholder="Last Name" required />
+            <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="Username" required />
+            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required />
+            <input type="file" name="profilePhoto" accept="image/*" onChange={handleChange} />
+            <div className="cyber-profile-actions">
+              <button type="submit" className="cyber-btn">Save Changes</button>
+              <button type="button" className="cyber-btn red" onClick={() => setEditing(false)}>Cancel</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </>
   );
 };
 
-export default Home;
+const cyberStyle = `
+  body {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a0b2e 50%, #0a0a0a 100%);
+    color: #00d4ff;
+    font-family: 'Courier New', monospace;
+  }
+
+  .cyber-loading {
+    text-align: center;
+    color: #39ff14;
+    margin-top: 100px;
+  }
+
+  .cyber-profile-container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: rgba(26, 11, 46, 0.6);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.2);
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+
+  .cyber-profile-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 20px;
+    border: 2px solid #39ff14;
+  }
+
+  .cyber-profile-details p {
+    font-size: 1.1rem;
+    margin: 8px 0;
+  }
+
+  .cyber-profile-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+
+  .cyber-btn {
+    padding: 10px 20px;
+    background: linear-gradient(45deg, #00d4ff, #39ff14);
+    color: #0a0a0a;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+  }
+
+  .cyber-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+  }
+
+  .cyber-btn.red {
+    background: linear-gradient(45deg, #e74c3c, #ff6f61);
+    color: #fff;
+  }
+
+  .cyber-form input,
+  .cyber-form select {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    background: rgba(0, 0, 0, 0.2);
+    color: #00d4ff;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .cyber-form input:focus,
+  .cyber-form select:focus {
+    border-color: #39ff14;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+  }
+`;
+
+export default Homee;
 

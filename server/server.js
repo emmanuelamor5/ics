@@ -980,6 +980,23 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/posts/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!id || isNaN(parseInt(id))) {
+    return res.status(400).json({ message: 'Invalid post ID' });
+  }
+  try {
+    const result = await pool.query('DELETE FROM posts WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+    res.json({ message: 'Post deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    res.status(500).json({ message: 'Error deleting post' });
+  }
+});
+
 
 
 

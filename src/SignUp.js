@@ -157,7 +157,7 @@ export default function Signup() {
               name="username"
               value={form.username}
               onChange={handleChange}
-              placeholder="Username"
+              placeholder="Choose a Username"
               required
             />
             <input
@@ -173,7 +173,7 @@ export default function Signup() {
               type="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="Password"
+              placeholder="Choose a Password"
               required
             />
             <select

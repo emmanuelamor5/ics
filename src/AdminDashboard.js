@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('users');
+  const[posts, setPosts] = useState([]);
+  const[postFilter, setPostFilter] = useState('');
   const [users, setUsers] = useState([]);
   const [claims, setClaims] = useState([]);
   const [routes, setRoutes] = useState([]);
@@ -36,6 +38,7 @@ const AdminDashboard = () => {
     fetchStages();
     fetchSaccos();
     fetchRatings();
+    fetchPosts();
   }, []);
 
   const fetchUsers = async () => {
@@ -82,10 +85,38 @@ const AdminDashboard = () => {
     }
   };
 
+ // Fetch posts
+const fetchPosts = async () => {
+  try {
+    const res = await fetch('http://localhost:5000/api/posts');
+    const data = await res.json();
+    setPosts(data);
+  } catch (err) {
+    console.error('Error fetching posts:', err);
+  }
+};
+
+// Delete post
+const deletePost = async (id) => {
+  if (!window.confirm('Are you sure you want to delete this post?')) return;
+  try {
+    const res = await fetch(`http://localhost:5000/api/posts/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      alert('Post deleted successfully!');
+      fetchPosts();
+    } else {
+      alert('Failed to delete post');
+    }
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    alert('Error deleting post');
+  }
+};
+
   // User creation function
   const createUser = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/users', {
+      const res = await fetch('http://localhost:5000/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser),
@@ -417,9 +448,8 @@ const AdminDashboard = () => {
               required
             >
               <option value="">Select User Type</option>
-              <option value="driver">Driver</option>
-              <option value="conductor">Conductor</option>
-              <option value="passenger">Passenger</option>
+              <option value="Driver">Driver</option>
+              <option value="Commuter">Commuter</option>
               <option value="admin">Admin</option>
             </select>
             <input 
@@ -486,6 +516,48 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
+
+  // ...existing code...
+const renderRoadUpdatesTab = () => {
+  // Filter posts by description or type
+  const filteredPosts = posts.filter(post =>
+    (post.description?.toLowerCase().includes(postFilter.toLowerCase()) ||
+     post.type?.toLowerCase().includes(postFilter.toLowerCase()))
+  );
+
+  return (
+    <div>
+      <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Road Updates</h2>
+      <input
+        style={inputStyle}
+        placeholder="Filter by description or type..."
+        value={postFilter}
+        onChange={e => setPostFilter(e.target.value)}
+      />
+      {filteredPosts.length === 0 ? (
+        <p>No posts found.</p>
+      ) : (
+        <div style={{ display: 'grid', gap: '15px', marginTop: '1rem' }}>
+          {filteredPosts.map(post => (
+            <div key={post.id} style={{ backgroundColor: '#111', border: '1px solid #00d4ff33', borderRadius: '10px', padding: '15px', color: '#ddd' }}>
+              <h3 style={{ color: '#00d4ff', marginBottom: '10px' }}>{post.type || 'Road Update'}</h3>
+              <p>{post.description}</p>
+              <p style={{ fontSize: '0.9em', color: '#888', marginTop: '10px' }}>
+                <strong>Date:</strong> {new Date(post.created_at).toLocaleString()}
+              </p>
+              <button
+                onClick={() => deletePost(post.id)}
+                style={{ ...deleteButtonStyle, width: '100px', height: '40px' }}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
   const renderTransportTab = () => (
     <div>
@@ -615,23 +687,25 @@ const AdminDashboard = () => {
     </div>
   );
 
-  return (
-    <div style={{ padding: '2rem', fontFamily: 'monospace', backgroundColor: '#0a0a0a', color: '#00d4ff', minHeight: '100vh' }}>
-      <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Admin Dashboard</h1>
-      <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-        <button style={activeTab === 'users' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('users')}>Manage Users</button>
-        <button style={activeTab === 'claims' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('claims')}>Review Claims ({claims.length})</button>
-        <button style={activeTab === 'transport' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('transport')}>Manage Transport Data</button>
-        <button style={activeTab === 'ratings' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('ratings')}>Manage Ratings ({ratings.length})</button>
-      </div>
-      {activeTab === 'users' && renderUsersTab()}
-      {activeTab === 'claims' && renderClaimsTab()}
-      {activeTab === 'transport' && renderTransportTab()}
-      {activeTab === 'ratings' && renderRatingsTab()}
-      <button onClick={handleLogout} style={logoutButtonStyle}>Logout</button>
+return (
+  <div style={{ padding: '2rem', fontFamily: 'monospace', backgroundColor: '#0a0a0a', color: '#00d4ff', minHeight: '100vh' }}>
+    <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Admin Dashboard</h1>
+    <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+      <button style={activeTab === 'users' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('users')}>Manage Users</button>
+      <button style={activeTab === 'claims' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('claims')}>Review Claims ({claims.length})</button>
+      <button style={activeTab === 'transport' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('transport')}>Manage Transport Data</button>
+      <button style={activeTab === 'ratings' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('ratings')}>Manage Ratings ({ratings.length})</button>
+      <button style={activeTab === 'roadupdates' ? { backgroundColor: '#39ff14', color: '#000', ...inputStyle } : { backgroundColor: '#333', color: '#00d4ff', ...inputStyle }} onClick={() => setActiveTab('roadupdates')}>Road Updates</button>
     </div>
-  );
-};
+    {activeTab === 'users' && renderUsersTab()}
+    {activeTab === 'claims' && renderClaimsTab()}
+    {activeTab === 'transport' && renderTransportTab()}
+    {activeTab === 'ratings' && renderRatingsTab()}
+    {activeTab === 'roadupdates' && renderRoadUpdatesTab()}
+    <button onClick={handleLogout} style={logoutButtonStyle}>Logout</button>
+  </div>
+);
+}  
 
 export default AdminDashboard;
 

@@ -121,7 +121,7 @@ function LandingPage() {
         <div className="landing-buttons">
           <button onClick={() => navigate('/signup')}>Get Started</button>
           <button onClick={() => navigate('/login')}>Login</button>
-          <button onClick={() => navigate('/AdminDashboard')}>Admin Login</button>
+          
         </div>
         
         <div className="landing-footer">

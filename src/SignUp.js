@@ -184,6 +184,7 @@ export default function Signup() {
             >
               <option value="Driver">Driver</option>
               <option value="Commuter">Commuter</option>
+              
             </select>
                     {form.specify === 'Driver' && (
           <>

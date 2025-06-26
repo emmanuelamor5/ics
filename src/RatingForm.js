@@ -7,7 +7,7 @@ const RatingForm = () => {
     cleanliness_rating: 0,
     safety_rating: 0,
     service_rating: 0,
-    review_text: ''
+    review_text: '',
   });
   
   const [errors, setErrors] = useState({});
@@ -183,12 +183,30 @@ const RatingForm = () => {
   // CSS Styles
   const styles = {
     container: {
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a0033 0%, #0f0f23 50%, #000000 100%)',
-      position: 'relative',
-      overflow: 'hidden',
-      padding: '24px 16px'
-    },
+  height: '100vh',
+  width: '100vw',
+  background: 'linear-gradient(135deg, #1a0033 0%, #0f0f23 50%, #000000 100%)',
+  position: 'relative',
+  overflow: 'auto',
+  padding: '32px 16px',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center'
+},
+formCard: {
+  width: '100%',
+  maxWidth: '960px',
+  margin: '0 auto',
+  backdropFilter: 'blur(16px)',
+  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  border: '1px solid rgba(0, 212, 255, 0.3)',
+  borderRadius: '16px',
+  padding: '32px',
+  boxShadow: '0 8px 32px rgba(0, 212, 255, 0.1)',
+  position: 'relative',
+  zIndex: 10
+},
+    
     gridOverlay: {
       position: 'absolute',
       inset: 0,
@@ -203,18 +221,7 @@ const RatingForm = () => {
       borderRadius: '50%',
       animation: 'pulse 3s infinite'
     },
-    formCard: {
-      maxWidth: '800px',
-      margin: '0 auto',
-      backdropFilter: 'blur(16px)',
-      backgroundColor: 'rgba(0, 0, 0, 0.2)',
-      border: '1px solid rgba(0, 212, 255, 0.3)',
-      borderRadius: '16px',
-      padding: '32px',
-      boxShadow: '0 8px 32px rgba(0, 212, 255, 0.1)',
-      position: 'relative',
-      zIndex: 10
-    },
+    
     title: {
       fontSize: '2rem',
       fontWeight: 'bold',
@@ -389,7 +396,7 @@ const RatingForm = () => {
                 Sacco ID <span style={{ color: '#ff4444' }}>*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 id="sacco_id"
                 name="sacco_id"
                 value={formData.sacco_id}
@@ -399,7 +406,7 @@ const RatingForm = () => {
                   ...(errors.sacco_id ? styles.inputError : {})
                 }}
                 className="input-focus"
-                placeholder="Enter sacco ID"
+                placeholder="Enter sacco ID/Name"
               />
               {errors.sacco_id && (
                 <p style={styles.errorText}>{errors.sacco_id}</p>

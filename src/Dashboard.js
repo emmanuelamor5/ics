@@ -100,9 +100,13 @@ function Dashboard() {
         <div style={styles.card}>
           <h2 style={styles.heading}>Welcome, {user.firstname}!</h2>
           <p style={styles.subheading}>Your commuter dashboard</p>
+          
 
           {/* 🔥 Weather Section */}
           <WeatherBox />
+          <p style={styles.note}>
+            Here, you can monitor road conditions, find Matatu stages, rate Saccos, and retrieve lost items.
+          </p>
 
           <div style={styles.actions}>
             <button style={styles.button} onClick={() => navigate('/Home')}>Find Matatu Stages</button>
@@ -114,9 +118,7 @@ function Dashboard() {
             <button style={{ ...styles.button, backgroundColor: '#e74c3c' }} onClick={handleLogout}>Logout</button>
           </div>
 
-          <p style={styles.note}>
-            Here, you can monitor road conditions, find Matatu stages, rate Saccos, and retrieve lost items.
-          </p>
+          
         </div>
       </div>
     </>

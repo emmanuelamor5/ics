@@ -29,8 +29,8 @@ function Login() {
         alert('Login successful!');
         if (role === 'driver') navigate('/driver-dashboard');
         else if (role === 'commuter') navigate('/dashboard');
-        else if (role === 'admin') navigate('/profile');
-        else navigate('/profile');
+        else if (role === 'admin') navigate('/AdminDashboard');
+        else navigate('/');
       } else {
         setError(data.message || 'Login failed');
       }

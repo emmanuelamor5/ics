@@ -9,6 +9,8 @@ const Homee = () => {
     username: '',
     email: '',
     specify: '',
+    password: '',
+    confirmPassword: '',
     profilePhoto: null,
   });
   const [editing, setEditing] = useState(false);
@@ -25,6 +27,8 @@ const Homee = () => {
           username: data.username || '',
           email: data.email || '',
           specify: data.specify || '',
+          password: data.password || '',
+          confirmPassword: data.confirmPassword || '',
           profilePhoto: null,
         });
       })
@@ -98,6 +102,8 @@ const Homee = () => {
               <p><strong>Last Name:</strong> {user.lastname}</p>
               <p><strong>Username:</strong> {user.username}</p>
               <p><strong>Email:</strong> {user.email}</p>
+            
+              
             </div>
             <div className="cyber-profile-actions">
               <button onClick={() => setEditing(true)} className="cyber-btn">Edit Profile</button>
@@ -110,6 +116,8 @@ const Homee = () => {
             <input type="text" name="lastname" value={formData.lastname} onChange={handleChange} placeholder="Last Name" required />
             <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="Username" required />
             <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required />
+            <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="New Password" required />
+            <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm New Password" required />
             <input type="file" name="profilePhoto" accept="image/*" onChange={handleChange} />
             <div className="cyber-profile-actions">
               <button type="submit" className="cyber-btn">Save Changes</button>

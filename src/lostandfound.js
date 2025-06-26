@@ -6,27 +6,64 @@ const LostAndFound = () => {
   const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ lostitem: '', route: '', date: '', sacco: '', description: '', image: null });
-  const [showClaimForm, setShowClaimForm] = useState(null);
-  const [showConfirmationModal, setShowConfirmationModal] = useState(null);
+  const [showClaimFormId, setShowClaimFormId] = useState(null);
   const navigate = useNavigate();
 
-  const fetchItems = async () => {
-    try {
-      const res = await fetch('http://localhost:5000/api/lost-items');
-      const data = await res.json();
-      setItems(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
+  // Fetch current user and lost items
   useEffect(() => {
-    fetch('http://localhost:5000/api/me', { credentials: 'include' })
-      .then(res => res.ok ? res.json() : Promise.reject('Not logged in'))
-      .then(data => setUser(data))
-      .catch(() => navigate('/'));
-    fetchItems();
+    const fetchUserAndItems = async () => {
+      try {
+        const resUser = await fetch('http://localhost:5000/api/me', { credentials: 'include' });
+        if (!resUser.ok) throw new Error('Not logged in');
+        const userData = await resUser.json();
+        setUser(userData);
+        fetchItems();
+      } catch {
+        navigate('/');
+      }
+    };
+
+    fetchUserAndItems();
   }, [navigate]);
+
+ const fetchItems = async () => {
+  try {
+    const res = await fetch('http://localhost:5000/api/lost-items');
+    const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      console.error('Unexpected response format:', data);
+      return;
+    }
+
+    const grouped = groupItemsWithClaims(data);
+    setItems(grouped);
+  } catch (err) {
+    console.error('Error fetching items:', err);
+  }
+};
+ 
+
+  const groupItemsWithClaims = (data) => {
+    const map = new Map();
+    data.forEach(item => {
+      if (!map.has(item.id)) {
+        map.set(item.id, { ...item, claims: [] });
+      }
+      if (item.claimer_name) {
+        map.get(item.id).claims.push({
+          id: item.claim_id,
+          claimer_name: item.claimer_name,
+          contact_info: item.contact_info,
+          details: item.claim_details,
+          is_confirmed: item.is_confirmed,
+          is_approved: item.is_approved,
+          created_at: item.claim_created_at
+        });
+      }
+    });
+    return Array.from(map.values());
+  };
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -36,9 +73,7 @@ const LostAndFound = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
-      if (value) payload.append(key, value);
-    });
+    Object.entries(form).forEach(([key, val]) => val && payload.append(key, val));
 
     try {
       const res = await fetch('http://localhost:5000/api/lost-item', {
@@ -46,15 +81,16 @@ const LostAndFound = () => {
         body: payload,
         credentials: 'include'
       });
+
       if (res.ok) {
-        alert('Report submitted!');
+        alert('Lost item reported.');
+        setForm({ lostitem: '', route: '', date: '', sacco: '', description: '', image: null });
         fetchItems();
       } else {
-        alert('Failed to submit report');
+        alert('Failed to report item.');
       }
     } catch (err) {
-      console.error(err);
-      alert('Error submitting report');
+      console.error('Submit error:', err);
     }
   };
 
@@ -68,14 +104,13 @@ const LostAndFound = () => {
           lost_item_id,
           claimer_name: claimData.name,
           contact_info: claimData.phone,
-          details: claimData.reason,
-          created_at: claimData.date
+          details: claimData.reason
         })
       });
 
       if (res.ok) {
         alert('Claim submitted to driver. Awaiting confirmation.');
-        setShowClaimForm(null);
+        setShowClaimFormId(null);
         fetchItems();
       } else {
         const data = await res.json();
@@ -87,21 +122,52 @@ const LostAndFound = () => {
     }
   };
 
+ const handleDriverConfirmClaim = async (claimId) => {
+  if (!claimId) {
+    alert('Invalid claim ID');
+    return;
+  }
+
+  if (!window.confirm('Are you sure you want to confirm this claim?')) return;
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/claims/${claimId}/confirm`, {
+      method: 'PUT',
+      credentials: 'include'
+    });
+
+    if (res.ok) {
+      alert('Claim confirmed! Sent to admin for approval.');
+      fetchItems();
+    } else {
+      const data = await res.json();
+      alert(data.message || 'Failed to confirm claim');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error confirming claim');
+  }
+};
+
+
   const handleDeleteItem = async (lost_item_id) => {
-    if (user?.role !== 'Admin') {
+    if (user?.specify !== 'Admin') {
       alert('Only admin can delete items.');
       return;
     }
 
+    if (!window.confirm('Are you sure you want to delete this item?')) {
+      return;
+    }
+
     try {
-      const res = await fetch(`http://localhost:5000/api/delete-lost-item/${lost_item_id}`, {
+      const res = await fetch(`http://localhost:5000/api/admin/lost-item/${lost_item_id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
 
       if (res.ok) {
         alert('Item deleted successfully.');
-        setShowConfirmationModal(null);
         fetchItems();
       } else {
         alert('Failed to delete item.');
@@ -111,6 +177,63 @@ const LostAndFound = () => {
       alert('Error deleting item.');
     }
   };
+
+  const handleDriverDeleteItem = async (lostItemId) => {
+  if (!window.confirm('Are you sure you want to delete this post? It has been approved.')) return;
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/lost-item/${lostItemId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message || 'Item deleted.');
+      fetchItems();
+    } else {
+      alert(data.error || 'Failed to delete item.');
+    }
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    alert('Error occurred while deleting the post.');
+  }
+};
+
+
+  // Group items by ID to handle multiple claims per item
+  const groupedItems = items.reduce((acc, item) => {
+    const existingItem = acc.find(i => i.id === item.id);
+    if (existingItem) {
+      if (item.claimer_name) {
+        existingItem.claims = existingItem.claims || [];
+        existingItem.claims.push({
+          id: item.claim_id,
+          claimer_name: item.claimer_name,
+          contact_info: item.contact_info,
+          details: item.claim_details,
+          is_confirmed: item.is_confirmed,
+          is_approved: item.is_approved,
+          created_at: item.claim_created_at
+        });
+      }
+    } else {
+      const newItem = { ...item };
+      if (item.claimer_name) {
+        newItem.claims = [{
+          id: item.claim_id,
+          claimer_name: item.claimer_name,
+          contact_info: item.contact_info,
+          details: item.claim_details,
+          is_confirmed: item.is_confirmed,
+          is_approved: item.is_approved,
+          created_at: item.claim_created_at
+        }];
+      }
+      acc.push(newItem);
+    }
+    return acc;
+  }, []);
 
   return (
     <>
@@ -143,6 +266,7 @@ const LostAndFound = () => {
         }
 
         .post-form input,
+        .post-form select,
         .post-form textarea {
           width: 100%;
           margin-bottom: 12px;
@@ -188,7 +312,7 @@ const LostAndFound = () => {
         }
 
         .item-card button {
-          margin-top: 10px;
+          margin: 5px 5px 5px 0;
           padding: 8px 12px;
           border-radius: 6px;
           border: none;
@@ -212,15 +336,49 @@ const LostAndFound = () => {
 
         .alert-box h4 {
           color: #39ff14;
+          margin-bottom: 10px;
         }
 
-        .admin-delete {
-          background: #ff4d4d;
-          color: #fff;
-          margin-top: 10px;
-          padding: 8px 12px;
-          border: none;
+        .claim-item {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid #00fff722;
           border-radius: 6px;
+          padding: 12px;
+          margin-bottom: 10px;
+        }
+
+        .admin-delete, .danger-btn {
+          background: #ff4d4d !important;
+          color: #fff !important;
+        }
+
+        .confirm-btn {
+          background: #28a745 !important;
+          color: #fff !important;
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 0.8em;
+          font-weight: bold;
+          margin-left: 10px;
+        }
+
+        .status-pending {
+          background: #ffc107;
+          color: #000;
+        }
+
+        .status-confirmed {
+          background: #17a2b8;
+          color: #fff;
+        }
+
+        .status-approved {
+          background: #28a745;
+          color: #fff;
         }
       `}</style>
 
@@ -232,55 +390,133 @@ const LostAndFound = () => {
             <>
               <h3>Report Lost Item</h3>
               <form onSubmit={handleSubmit} className="post-form">
-                <input type="text" name="lostitem" placeholder="Item Description (e.g. Phone, ID)" onChange={handleChange} required />
-                <input type="text" name="route" placeholder="Route (e.g. CBD to Westlands)" onChange={handleChange} required />
-                <input type="date" name="date" onChange={handleChange} required />
-                <input type="text" name="sacco" placeholder="SACCO (e.g. City Hoppa)" onChange={handleChange} required />
-                <textarea name="description" placeholder="Additional details..." onChange={handleChange} />
-                <input type="file" name="image" accept="image/*" onChange={handleChange} />
-                <button type="submit">Report Lost Item</button>
+                <input 
+                  type="text" 
+                  name="lostitem" 
+                  placeholder="Item Description (e.g. Phone, ID)" 
+                  value={form.lostitem}
+                  onChange={handleChange} 
+                  required 
+                />
+                <input 
+                  type="text" 
+                  name="route" 
+                  placeholder="Route (e.g. CBD to Westlands)" 
+                  value={form.route}
+                  onChange={handleChange} 
+                  required 
+                />
+                <input 
+                  type="date" 
+                  name="date" 
+                  value={form.date}
+                  onChange={handleChange} 
+                  required 
+                />
+                <input 
+                  type="text" 
+                  name="sacco" 
+                  placeholder="SACCO (e.g. City Hoppa)" 
+                  value={form.sacco}
+                  onChange={handleChange} 
+                  required 
+                />
+                <textarea 
+                  name="description" 
+                  placeholder="Additional details (e.g. Found under seat, Lost during morning trip...)" 
+                  value={form.description}
+                  onChange={handleChange} 
+                />
+                <input 
+                  type="file" 
+                  name="image" 
+                  accept="image/*" 
+                  onChange={handleChange} 
+                />
+                <button type="submit">Report Item</button>
               </form>
             </>
           )}
 
           <h3>Recent Items</h3>
-          {items.length === 0 && <p>No lost items reported yet.</p>}
+          {groupedItems.length === 0 && <p>No items reported yet.</p>}
 
-          {items.map((item, idx) => (
-            <div key={idx} className="item-card">
+          {groupedItems.map((item) => (
+            <div key={item.id} className="item-card">
               <strong>{item.description?.toLowerCase().includes('found') ? 'Found:' : 'Lost:'}</strong> {item.lostitem}<br />
               <strong>Route:</strong> {item.route}<br />
+              <strong>Date:</strong> {new Date(item.date).toLocaleDateString()}<br />
               <strong>Sacco:</strong> {item.sacco}<br />
-              <strong><em>Posted at: {new Date(item.created_at).toLocaleString()}</em></strong><br />
-              {item.image_url && <img src={`http://localhost:5000${item.image_url}`} alt="Item" />}
+              <strong>Description:</strong> {item.description || 'No additional details'}<br />
+              <strong><em>Posted: {new Date(item.created_at).toLocaleString()}</em></strong><br />
+              
+              {item.image_url && (
+                <img src={`http://localhost:5000${item.image_url}`} alt="Item" />
+              )}
 
-              {user?.specify === 'Commuter' && item.description?.toLowerCase().includes('found') && (
+              {/* Commuter can claim items */}
+              {user?.specify === 'Commuter' && (
                 <>
-                  {showClaimForm === item.id ? (
+                  {showClaimFormId === item.id ? (
                     <ClaimForm
                       item={item}
-                      onClose={() => setShowClaimForm(null)}
+                      onClose={() => setShowClaimFormId(null)}
                       onSubmit={(formData) => handleClaimSubmit(item.id, formData)}
                     />
                   ) : (
-                    <button onClick={() => setShowClaimForm(item.id)}>This Is Mine</button>
+                    <button onClick={() => setShowClaimFormId(item.id)}>Claim This Item</button>
                   )}
                 </>
               )}
 
-              {user?.specify === 'Driver' && item.claimer_name && (
+              {/* Display claims for drivers */}
+              {user?.specify === 'Driver' && item.claims && item.claims.length > 0 && (
                 <div className="alert-box">
-                  <h4>🚨 Claim Alert</h4>
-                  <p><strong>Claimer:</strong> {item.claimer_name}</p>
-                  <p><strong>Contact:</strong> {item.contact_info}</p>
-                  <p><strong>Reason:</strong> {item.claim_details}</p>
-                  <p><strong>Date:</strong> {new Date(item.created_at).toLocaleDateString()}</p>
-                  <button onClick={() => setShowConfirmationModal(item.id)}>✅ Confirm & Remove from List</button>
+                  <h4>🚨 Claims for this item:</h4>
+                  {item.claims.map((claim) => (
+                    <div key={claim.id} className="claim-item">
+                      <p><strong>Claimer:</strong> {claim.claimer_name}
+                        {claim.is_approved && <span className="status-badge status-approved">APPROVED</span>}
+                        {claim.is_confirmed && !claim.is_approved && <span className="status-badge status-confirmed">AWAITING ADMIN</span>}
+                        {!claim.is_confirmed && <span className="status-badge status-pending">PENDING</span>}
+                      </p>
+                      <p><strong>Contact:</strong> {claim.contact_info}</p>
+                      <p><strong>Reason:</strong> {claim.details}</p>
+                      <p><strong>Claimed:</strong> {new Date(claim.created_at).toLocaleDateString()}</p>
+                      
+                      {!claim.is_confirmed && (
+                        <button 
+                          className="confirm-btn"
+                          onClick={() => handleDriverConfirmClaim(claim.id)}
+                        >
+                          ✅ Confirm Claim
+                        </button>
+                        
+                      )}
+                      
+                      {item.claims.some(c => c.is_approved) && (
+  <button
+    className="danger-btn"
+    onClick={() => handleDriverDeleteItem(item.id)}
+  >
+    🗑️ Delete Post (Approved)
+  </button>
+)}
+
+                    </div>
+
+                  ))}
                 </div>
               )}
 
+              {/* Admin can delete items */}
               {user?.specify === 'Admin' && (
-                <button className="admin-delete" onClick={() => handleDeleteItem(item.id)}>Delete</button>
+                <button 
+                  className="admin-delete" 
+                  onClick={() => handleDeleteItem(item.id)}
+                >
+                  Delete Item
+                </button>
               )}
             </div>
           ))}

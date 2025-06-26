@@ -266,10 +266,19 @@ app.post('/api/claim-item', async (req, res) => {
 app.get('/api/lost-items', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT lf.*, c.claimer_name, c.contact_info, c.details AS claim_details
+      SELECT
+        lf.*,
+        c.id           AS claim_id,
+        c.claimer_name,
+        c.contact_info,
+        c.details      AS claim_details,
+        c.is_confirmed,
+        c.is_approved,
+        c.created_at   AS claim_created_at
       FROM lostandfound lf
-      LEFT JOIN claims c ON lf.id = c.lost_item_id
-      ORDER BY lf.date DESC
+      LEFT JOIN claims c
+        ON lf.id = c.lost_item_id
+      ORDER BY lf.date DESC;
     `);
     res.json(result.rows);
   } catch (err) {
@@ -277,6 +286,7 @@ app.get('/api/lost-items', async (req, res) => {
     res.status(500).json({ message: 'Error fetching lost items with claims' });
   }
 });
+
 
 // GET all stages from the database
 app.get('/api/stages', async (req, res) => {
@@ -434,14 +444,16 @@ app.get('/api/ratings', async (req, res) => {
 
     // Main SELECT query with LIMIT + OFFSET
     const query = `
-      SELECT r.*, s.sacco_name,
-        ROUND((r.cleanliness_rating + r.safety_rating + r.service_rating) / 3.0, 2) AS average_rating
-      FROM ratings r
-      JOIN saccos s ON s.id = r.sacco_id
-      ${whereClause}
-      ORDER BY ${orderBy}
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
+  SELECT r.*, s.sacco_name,
+    ROUND((r.cleanliness_rating + r.safety_rating + r.service_rating) / 3.0, 2) AS average_rating
+  FROM ratings r
+  JOIN saccos s ON s.sacco_id = r.sacco_id
+  ${whereClause}
+  ORDER BY ${orderBy}
+  LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+`;
+
+    
     queryParams.push(limitInt, offset);
 
     const result = await pool.query(query, queryParams);
@@ -616,14 +628,170 @@ app.delete('/api/ratings/:id', async (req, res) => {
 
 
 // Delete lost item after claim confirmed
-app.delete('/api/admin/lost-item/:id', async (req, res) => {
+app.delete('/api/lost-item/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // Ensure user is authenticated
+  if (!req.session.user || req.session.user.role !== 'Driver') {
+    return res.status(403).json({ error: 'Only drivers can delete their own approved lost items' });
+  }
+
   try {
-    await pool.query('DELETE FROM lostandfound WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
+    // Check if this lost item has an approved claim
+    const claimCheck = await pool.query(
+      `SELECT * FROM claims WHERE lost_item_id = $1 AND is_approved = TRUE`,
+      [id]
+    );
+
+    if (claimCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'This item has not been approved yet or no claim exists' });
+    }
+
+    // Delete the lost item
+    await pool.query('DELETE FROM lostandfound WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Successful Deletion of Lost Item' });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to delete lost item' });
+    console.error('Error deleting lost item by driver:', err);
+    res.status(500).json({ error: 'Server error during delete' });
   }
 });
+
+// CREATE route
+app.post('/api/routes', async (req, res) => {
+  const { display_name } = req.body;
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO routes (display_name) VALUES ($1) RETURNING *',
+      [display_name]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating route:', err);
+    res.status(500).json({ error: 'Failed to create route' });
+  }
+});
+
+
+// DELETE route
+app.delete('/api/routes/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM routes WHERE route_id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting route:', err);
+    res.status(500).json({ error: 'Failed to delete route' });
+  }
+});
+// UPDATE route
+app.put('/api/routes/:id', async (req, res) => {
+  const { display_name } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE routes SET display_name = $1 WHERE route_id = $2 RETURNING *',
+      [display_name, req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating route:', err);
+    res.status(500).json({ error: 'Failed to update route' });
+  }
+});
+
+// CREATE stage
+app.post('/api/stages', async (req, res) => {
+  const { name, latitude, longitude } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO stages (name, latitude, longitude) VALUES ($1, $2, $3) RETURNING *',
+      [name, latitude, longitude]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating stage:', err);
+    res.status(500).json({ error: 'Failed to create stage' });
+  }
+});
+
+// DELETE stage
+app.delete('/api/stages/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM stages WHERE stage_id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting stage:', err);
+    res.status(500).json({ error: 'Failed to delete stage' });
+  }
+});
+
+// UPDATE stage
+app.put('/api/stages/:id', async (req, res) => {
+  const { name, latitude, longitude } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE stages SET name = $1, latitude = $2, longitude = $3 WHERE stage_id = $4 RETURNING *',
+      [name, latitude, longitude, req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Stage not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating stage:', err);
+    res.status(500).json({ error: 'Failed to update stage' });
+  }
+});
+
+// CREATE sacco
+app.post('/api/saccos', async (req, res) => {
+  const { sacco_name, base_fare_range, route_id, sacco_stage_id } = req.body;
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO saccos (sacco_name, base_fare_range, route_id, sacco_stage_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [sacco_name, base_fare_range, route_id, sacco_stage_id]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating sacco:', err);
+    res.status(500).json({ error: 'Failed to create sacco' });
+  }
+});
+
+
+// DELETE sacco
+app.delete('/api/saccos/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM saccos WHERE sacco_id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting sacco:', err);
+    res.status(500).json({ error: 'Failed to delete sacco' });
+  }
+});
+
+// UPDATE sacco
+app.put('/api/saccos/:id', async (req, res) => {
+  const { name, base_fare_range, route_id, sacco_stage_id } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE saccos SET name = $1, base_fare_range = $2, route_id = $3, sacco_stage_id = $4 WHERE sacco_id = $5 RETURNING *',
+      [name, base_fare_range, route_id, sacco_stage_id, req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Sacco not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating sacco:', err);
+    res.status(500).json({ error: 'Failed to update sacco' });
+  }
+});
+
+
 
 
 // Error handling middleware
@@ -641,6 +809,178 @@ app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
   res.status(500).json({ error: 'Internal Server Error' });
 });
+
+// Get all users
+app.get('/api/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, firstname, lastname, email, username, specify, sacco, ntsa_license FROM users ORDER BY id ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Delete a user
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Updated endpoints for your server.js
+
+// Update the confirm claim endpoint with better validation
+app.put('/api/claims/:id/confirm', async (req, res) => {
+  const { id } = req.params;
+  
+  // Validate that ID is provided and is a valid number
+  if (!id || isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'Invalid claim ID provided' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE claims SET is_confirmed = TRUE WHERE id = $1 RETURNING *', 
+      [parseInt(id)]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Claim not found' });
+    }
+    
+    res.json({ success: true, message: 'Claim confirmed by driver' });
+  } catch (err) {
+    console.error('Error confirming claim:', err);
+    res.status(500).json({ error: 'Failed to confirm claim' });
+  }
+});
+
+// Get confirmed claims for admin with better data structure
+app.get('/api/admin/claims', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        c.id,
+        c.claimer_name,
+        c.contact_info,
+        c.details,
+        c.is_confirmed,
+        c.is_approved,
+        c.created_at,
+        c.lost_item_id,
+        lf.lostitem, 
+        lf.description AS lost_description, 
+        lf.route, 
+        lf.date, 
+        lf.sacco, 
+        lf.image_url,
+        lf.created_at as item_created_at
+      FROM claims c
+      JOIN lostandfound lf ON lf.id = c.lost_item_id
+      WHERE c.is_confirmed = TRUE AND c.is_approved = FALSE
+      ORDER BY c.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching confirmed claims:', err);
+    res.status(500).json({ error: 'Failed to fetch claims' });
+  }
+});
+
+// Approve claim with validation
+app.put('/api/admin/claims/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  
+  // Validate that ID is provided and is a valid number
+  if (!id || isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'Invalid claim ID provided' });
+  }
+
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Update claim as approved
+    const claimResult = await client.query(
+      'UPDATE claims SET is_approved = TRUE WHERE id = $1 RETURNING lost_item_id', 
+      [parseInt(id)]
+    );
+    
+    if (claimResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Claim not found' });
+    }
+    
+    const lostItemId = claimResult.rows[0].lost_item_id;
+    
+    // Optional: Delete the lost item after approval
+    // Uncomment the next line if you want to auto-delete items after approval
+    // await client.query('DELETE FROM lostandfound WHERE id = $1', [lostItemId]);
+    
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Claim approved by admin' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error approving claim:', err);
+    res.status(500).json({ error: 'Failed to approve claim' });
+  } finally {
+    client.release();
+  }
+});
+
+// Delete lost item with validation
+app.delete('/api/admin/lost-item/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Validate that ID is provided and is a valid number
+  if (!id || isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'Invalid item ID provided' });
+  }
+
+  try {
+    const result = await pool.query('DELETE FROM lostandfound WHERE id = $1 RETURNING *', [parseInt(id)]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Lost item not found' });
+    }
+    
+    res.json({ success: true, message: 'Lost item deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting lost item:', err);
+    res.status(500).json({ error: 'Failed to delete lost item' });
+  }
+});
+
+// Delete a user with validation
+app.delete('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Validate that ID is provided and is a valid number
+  if (!id || isNaN(parseInt(id))) {
+    return res.status(400).json({ error: 'Invalid user ID provided' });
+  }
+
+  try {
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *', [parseInt(id)]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+
 
 
 
